@@ -36,7 +36,7 @@ Simple to use, single file, gloabal configuration lib for Fabric mods.
   }
   // And initialize it
   @Override
-	public void onInitialize() {
+  public void onInitialize() {
     Config();
   }
 ```
