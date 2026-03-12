@@ -1,6 +1,5 @@
-
 /*
- * Copyright (c) 2021 magistermaks
+ * Copyright (c) 2021 magistermaks and ?crystalx0375?
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +27,7 @@ import org.apache.logging.log4j.Logger;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -53,6 +53,7 @@ public class SimpleConfig {
         private final File file;
         private final String filename;
         private DefaultConfig provider;
+        private int version;
 
         private ConfigRequest(File file, String filename ) {
             this.file = file;
@@ -73,6 +74,10 @@ public class SimpleConfig {
             return this;
         }
 
+        public ConfigRequest version(int version) {
+            this.version = version;
+            return this;
+        }
         /**
          * Loads the config from the filesystem.
          *
@@ -101,6 +106,15 @@ public class SimpleConfig {
         return new ConfigRequest( path.resolve( filename + ".properties" ).toFile(), filename );
     }
 
+    /**
+     * @author Crystal
+     * Added folder with config
+     */
+    public static ConfigRequest of( String folder, String filename ) {
+        Path path = FabricLoader.getInstance().getConfigDir().resolve(folder);
+        return new ConfigRequest( path.resolve( filename + ".properties" ).toFile(), filename );
+    }
+
     private void createConfig() throws IOException {
 
         // try creating missing files
@@ -108,7 +122,9 @@ public class SimpleConfig {
         Files.createFile( request.file.toPath() );
 
         // write default config data
-        PrintWriter writer = new PrintWriter(request.file, "UTF-8");
+        PrintWriter writer = new PrintWriter(request.file, StandardCharsets.UTF_8);
+        writer.println("# <--- Dont change version below --->");
+        writer.println("version = " + request.version);
         writer.write( request.getConfig() );
         writer.close();
 
@@ -125,8 +141,8 @@ public class SimpleConfig {
         if( !entry.isEmpty() && !entry.startsWith( "#" ) ) {
             String[] parts = entry.split("=", 2);
             if( parts.length == 2 ) {
-                config.put( parts[0], parts[1] );
-            }else{
+                config.put( parts[0].trim(), parts[1].trim() );
+            } else {
                 throw new RuntimeException("Syntax error in config file on line " + line + "!");
             }
         }
@@ -136,7 +152,12 @@ public class SimpleConfig {
         this.request = request;
         String identifier = "Config '" + request.filename + "'";
 
-        if( !request.file.exists() ) {
+        if (request.file.exists() && isOutdated() ) {
+            LOGGER.warn( identifier + " is outdated, backing up and regenerating..." );
+            Remove();
+        }
+
+        if(!request.file.exists() ) {
             LOGGER.info( identifier + " is missing, generating default one..." );
 
             try {
@@ -148,7 +169,7 @@ public class SimpleConfig {
             }
         }
 
-        if( !broken ) {
+        if(!broken) {
             try {
                 loadConfig();
             } catch (Exception e) {
@@ -247,4 +268,33 @@ public class SimpleConfig {
         return request.file.delete();
     }
 
+    /**
+     * @author Crystal
+     * Recreate File and create outdated file
+     */
+    private void Remove() {
+        File backup = new File(request.file.getPath() + ".old");
+        if (backup.exists()) backup.delete();
+        request.file.renameTo(backup);
+    }
+    /**
+     * @author Crystal
+     * Checking version
+     * @return if true is outdate
+     */
+    private boolean isOutdated() {
+        try (Scanner reader = new Scanner(request.file)) {
+            while (reader.hasNextLine()) {
+                String s = reader.nextLine();
+                if (s.isEmpty() || (s.startsWith("#") && !s.contains("version"))) continue;
+                if (s.startsWith("version = ")) {
+                    int v = Integer.parseInt(s.split("=")[1].trim());
+                    return v < request.version;
+                }
+            }
+        } catch (Exception e) {
+            return true;
+        }
+        return true;
+    }
 }
