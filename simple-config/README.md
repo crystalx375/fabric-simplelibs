@@ -23,10 +23,22 @@ Simple to use, single file, gloabal configuration lib for Fabric mods.
   }
 
   // And that's it! Now you can request values from the config:
-  private String SOME_BOOL = CONFIG.getOrDefault("example_1", false);
+  private bool SOME_BOOL = CONFIG.getOrDefault("example_1", false);
   private int SOME_INTEGER = CONFIG.getOrDefault("example_2", 100);
-  private bool SOME_FLOAT = CONFIG.getOrDefault("example_3", 0.1);
-  private bool SOME_STRING = CONFIG.getOrDefault("example_4", "Hello");
+  private float SOME_FLOAT = (float) CONFIG.getOrDefault("example_3", 0.1);
+  private String SOME_STRING = CONFIG.getOrDefault("example_4", "Hello");
+  // Or use this:
+  private Config() {
+    SOME_BOOL = CONFIG.getOrDefault("example_1", false);
+    SOME_INTEGER = CONFIG.getOrDefault("example_2", 100);
+    SOME_FLOAT = (float) CONFIG.getOrDefault("example_3", 0.1);
+    SOME_STRING = CONFIG.getOrDefault("example_4", "Hello");
+  }
+  // And initialize it
+  @Override
+	public void onInitialize() {
+    Config();
+  }
 ```
 The config consists of key-value pairs separated with `=`, if `#` is used as the first char in line, that line will be considered a comment.
 If you have any more questions see JavaDoc comments in the source code.
